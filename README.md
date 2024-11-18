@@ -13,4 +13,4 @@ fn main() {
 ```
 
 `cargo build`
-`cargo run -- --input "path/to/file.mp3"`
+`cargo run -- --input "path/to/file.[mp3, wav]"`

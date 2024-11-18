@@ -10,3 +10,4 @@ tower = "0.5.1"
 
 symphonia = { version = "0.5.4", features = ["mp3"] }
 clap = { version = "4.2", features = ["derive"] }
+hound = "3.5.1"

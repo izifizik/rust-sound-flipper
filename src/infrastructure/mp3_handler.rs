@@ -13,7 +13,7 @@ use std::fs::File;
 use std::i16;
 use std::io::{BufWriter, Write};
 
-pub struct Mp3Handler; // ?
+pub struct Mp3Handler;
 
 impl AudioProcessor for Mp3Handler {
     fn decode(&self, input_path: &str) -> Result<AudioProperties, Box<dyn std::error::Error>> {
@@ -29,7 +29,8 @@ impl AudioProcessor for Mp3Handler {
             pcm_data,
             sample_rate,
             channels,
-            bitrate,
+            bitrate: Some(bitrate),
+            bits_per_sample: None,
         })
     }
 
@@ -125,7 +126,7 @@ impl Mp3Handler {
             .map_err(|e| format!("Error setting sample rate: {:?}", e))?;
         lame.set_channels(audio_props.channels as u8)
             .map_err(|e| format!("Error setting channels: {:?}", e))?;
-        lame.set_kilobitrate(audio_props.bitrate)
+        lame.set_kilobitrate(audio_props.bitrate.unwrap())
             .map_err(|e| format!("Error setting bitrate: {:?}", e))?;
         lame.init_params()
             .map_err(|e| format!("Error initializing LAME parameters: {:?}", e))?;
@@ -143,19 +144,10 @@ impl Mp3Handler {
         let buffer_size = (1.25 * pcm_data.len() as f32 + 7200.0) as usize;
         let mut buffer = vec![0; buffer_size];
 
-        let total_samples = pcm_data.len();
-        let mut processed_samples = 0;
-
-        for chunk in pcm_data.chunks(65536) {
-            let bytes_written = lame
-                .encode(chunk, chunk, &mut buffer)
-                .map_err(|e| format!("Error encoding MP3: {:?}", e))?;
-            writer.write_all(&buffer[..bytes_written])?;
-
-            processed_samples += chunk.len();
-            let progress = (processed_samples as f64 / total_samples as f64) * 100.0;
-            println!("Encoding progress: {:.2}%", progress);
-        }
+        let bytes_written = lame
+            .encode(pcm_data, pcm_data, &mut buffer)
+            .map_err(|e| format!("Error encoding MP3: {:?}", e))?;
+        writer.write_all(&buffer[..bytes_written])?;
 
         println!("Encoding completed successfully!");
         Ok(())

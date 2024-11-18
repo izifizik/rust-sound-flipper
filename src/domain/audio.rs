@@ -1,8 +1,5 @@
 pub trait AudioProcessor {
-    fn decode(
-        &self,
-        input_path: &str,
-    ) -> Result<AudioProperties, Box<dyn std::error::Error>>;
+    fn decode(&self, input_path: &str) -> Result<AudioProperties, Box<dyn std::error::Error>>;
     fn encode(
         &self,
         output_path: &str,
@@ -15,5 +12,6 @@ pub struct AudioProperties {
     pub pcm_data: Vec<i16>,
     pub sample_rate: u32,
     pub channels: u16,
-    pub bitrate: i32,
+    pub bitrate: Option<i32>,
+    pub bits_per_sample: Option<u16>,
 }

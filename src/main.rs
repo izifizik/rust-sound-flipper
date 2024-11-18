@@ -4,6 +4,7 @@ mod domain;
 mod infrastructure;
 mod interface;
 mod usecases;
+mod utils;
 
 #[derive(Parser, Debug)]
 #[command(name = "Rust Sound Flipper")]
