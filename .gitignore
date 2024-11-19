@@ -13,7 +13,8 @@ Thumbs.db
 *.swp
 *.swo
 build.rs
+*.mp3
+*.wav
 
 # Added by cargo
-
 /target

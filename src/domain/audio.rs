@@ -1,17 +1,7 @@
 pub trait AudioProcessor {
-    fn decode(&self, input_path: &str) -> Result<AudioProperties, Box<dyn std::error::Error>>;
-    fn encode(
-        &self,
-        output_path: &str,
-        prop: &AudioProperties,
-    ) -> Result<(), Box<dyn std::error::Error>>;
-}
+    fn decode(&mut self, input_path: &str) -> Result<(), Box<dyn std::error::Error>>;
+    fn encode(&self, output_path: &str) -> Result<(), Box<dyn std::error::Error>>;
+    fn reverse(&mut self);
 
-#[derive(Debug)]
-pub struct AudioProperties {
-    pub pcm_data: Vec<i16>,
-    pub sample_rate: u32,
-    pub channels: u16,
-    pub bitrate: Option<i32>,
-    pub bits_per_sample: Option<u16>,
+    fn clone_box(&self) -> Box<dyn AudioProcessor>;
 }

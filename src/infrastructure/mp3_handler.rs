@@ -1,4 +1,4 @@
-use crate::domain::audio::{AudioProcessor, AudioProperties};
+use crate::domain::audio::AudioProcessor;
 
 use lame::Lame;
 use symphonia::core::audio::{AudioBufferRef, Signal};
@@ -12,40 +12,52 @@ use symphonia::default::{get_codecs, get_probe};
 use std::fs::File;
 use std::i16;
 use std::io::{BufWriter, Write};
-
-pub struct Mp3Handler;
+#[derive(Clone)]
+pub struct Mp3Handler {
+    pub pcm_data: Vec<i16>,
+    pub sample_rate: u32,
+    pub channels: u16,
+    pub bitrate: i32,
+}
 
 impl AudioProcessor for Mp3Handler {
-    fn decode(&self, input_path: &str) -> Result<AudioProperties, Box<dyn std::error::Error>> {
+    fn decode(&mut self, input_path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let file_size = std::fs::metadata(input_path)?.len();
         let (mut format, track) = Self::init_decoder(input_path)?;
 
         let duration = Self::calculate_duration(&track)?;
-        let bitrate = Self::calculate_bitrate(file_size, duration);
+        self.bitrate = Self::calculate_bitrate(file_size, duration);
 
-        let (pcm_data, sample_rate, channels) = Self::extract_pcm(&mut format, &track)?;
+        (self.pcm_data, self.sample_rate, self.channels) = Self::extract_pcm(&mut format, &track)?;
 
-        Ok(AudioProperties {
-            pcm_data,
-            sample_rate,
-            channels,
-            bitrate: Some(bitrate),
-            bits_per_sample: None,
-        })
+        Ok(())
     }
 
-    fn encode(
-        &self,
-        output_path: &str,
-        audio_props: &AudioProperties,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut lame = Self::init_lame(audio_props)?;
-        Self::write_mp3(&mut lame, output_path, &audio_props.pcm_data)?;
+    fn encode(&self, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut lame = Self::init_lame(self)?;
+        Self::write_mp3(&mut lame, output_path, &self.pcm_data)?;
         Ok(())
+    }
+
+    fn reverse(&mut self) {
+        self.pcm_data.reverse();
+    }
+
+    fn clone_box(&self) -> Box<dyn AudioProcessor> {
+        Box::new(self.clone())
     }
 }
 
 impl Mp3Handler {
+    pub fn new() -> Mp3Handler {
+        Mp3Handler {
+            pcm_data: vec![],
+            bitrate: 0,
+            channels: 0,
+            sample_rate: 0,
+        }
+    }
+
     fn init_decoder(
         input_path: &str,
     ) -> Result<
@@ -120,13 +132,13 @@ impl Mp3Handler {
         Ok((pcm_data, sample_rate, channels))
     }
 
-    fn init_lame(audio_props: &AudioProperties) -> Result<Lame, Box<dyn std::error::Error>> {
+    fn init_lame(&self) -> Result<Lame, Box<dyn std::error::Error>> {
         let mut lame = Lame::new().ok_or("Failed to initialize LAME")?;
-        lame.set_sample_rate(audio_props.sample_rate)
+        lame.set_sample_rate(self.sample_rate)
             .map_err(|e| format!("Error setting sample rate: {:?}", e))?;
-        lame.set_channels(audio_props.channels as u8)
+        lame.set_channels(self.channels as u8)
             .map_err(|e| format!("Error setting channels: {:?}", e))?;
-        lame.set_kilobitrate(audio_props.bitrate.unwrap())
+        lame.set_kilobitrate(self.bitrate)
             .map_err(|e| format!("Error setting bitrate: {:?}", e))?;
         lame.init_params()
             .map_err(|e| format!("Error initializing LAME parameters: {:?}", e))?;
